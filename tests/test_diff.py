@@ -9,8 +9,8 @@ SCHED2 = {"status": "ScheduleApplies", "off": [[480, 720, "definite"], [900, 960
 
 
 class DiffTest(unittest.TestCase):
-    def test_first_run_is_silent(self):
-        self.assertEqual(changes({}, {"2026-11-06": SCHED, "2026-11-07": SCHED}), [])
+    def test_empty_old_with_slots_is_change(self):
+        self.assertEqual(changes({}, {"2026-11-07": SCHED}), [("2026-11-07", None, SCHED)])
 
     def test_same_content_no_change(self):
         self.assertEqual(changes({"2026-11-06": SCHED}, {"2026-11-06": dict(SCHED)}), [])

@@ -53,10 +53,13 @@ def normalize(raw: dict, group: str = GROUP) -> dict:
         if not isinstance(d, dict) or "date" not in d or "status" not in d:
             raise FetchError(f"{key} lacks date/status")
         off = []
-        for s in d.get("slots") or []:
-            kind = _kind(s.get("type"))
-            if kind:
-                off.append([int(s["start"]), int(s["end"]), kind])
+        try:
+            for s in d.get("slots") or []:
+                kind = _kind(s.get("type"))
+                if kind:
+                    off.append([int(s["start"]), int(s["end"]), kind])
+        except (KeyError, TypeError, ValueError, AttributeError) as e:
+            raise FetchError(f"{key} has a malformed slot: {e!r}") from e
         off.sort()
         days[str(d["date"])[:10]] = {"status": str(d["status"]), "off": off}
     if not days:

@@ -23,6 +23,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main  # latest state.json at job start, not at event time
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -39,14 +41,14 @@ jobs:
       - name: Save state
         if: always()
         run: |
-          if git diff --quiet -- state.json; then echo "state unchanged"; exit 0; fi
+          git add state.json
+          if git diff --cached --quiet; then echo "state unchanged"; exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add state.json
           git commit -m "chore: state"
-          for i in 1 2; do
-            git pull --rebase -X theirs origin main && git push && exit 0
-            sleep 5
+          for delay in 5 10 20 40 60; do
+            git pull --rebase -X theirs origin main && git push origin HEAD:main && exit 0
+            sleep "$delay"
           done
           exit 1
       - name: Fail if notifying failed

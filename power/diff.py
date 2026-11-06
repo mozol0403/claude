@@ -4,11 +4,9 @@
 def changes(old: dict, new: dict) -> list:
     """Return [(date, old_day_or_None, new_day)] sorted by date.
 
-    First run (old empty) is silent. A date seen for the first time is a change
-    only if it already carries outage slots; rollover and dropped dates are silent.
+    A date seen for the first time is a change only if it already carries outage
+    slots; rollover and dropped dates are silent. The caller skips the very first run.
     """
-    if not old:
-        return []
     out = []
     for d in sorted(new):
         if d in old:

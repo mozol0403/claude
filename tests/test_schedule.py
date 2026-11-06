@@ -44,6 +44,13 @@ class NormalizeTest(unittest.TestCase):
         with self.assertRaises(FetchError):
             normalize({"1.1": RAW["47.1"]})
 
+    def test_malformed_slot_raises_fetcherror(self):
+        for slot in ({"type": "Definite"}, {"start": "x", "end": 1, "type": "Definite"}, "junk"):
+            raw = {"47.1": {"today": {"slots": [slot], "date": "2026-11-06T00:00:00+02:00",
+                                      "status": "ScheduleApplies"}}}
+            with self.assertRaises(FetchError):
+                normalize(raw)
+
     def test_day_without_status_raises_fetcherror(self):
         with self.assertRaises(FetchError):
             normalize({"47.1": {"today": {"slots": [], "date": "2026-11-06T00:00:00+02:00"}}})

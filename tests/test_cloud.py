@@ -123,6 +123,31 @@ class CloudRunTest(unittest.TestCase):
         self.assertEqual(set(st["days"]), {"2026-11-06"})
 
 
+class ReviewFixesTest(unittest.TestCase):
+    def test_disappearing_date_not_reannounced(self):
+        s, st = Sender(), new_state()
+        st["days"] = {"2026-11-06": EMER, "2026-11-07": SCHED}
+        run(st, at(2026, 11, 6, 15), fetch_of({"2026-11-06": EMER}), s)
+        run(st, at(2026, 11, 6, 15, 10), fetch_of({"2026-11-06": EMER, "2026-11-07": SCHED}), s)
+        self.assertEqual(s.sent, [])
+
+    def test_changes_detected_after_midnight_when_only_today_stored(self):
+        s, st = Sender(), new_state()
+        st["days"] = {"2026-11-06": EMER}
+        run(st, at(2026, 11, 7, 0, 5), fetch_of({"2026-11-07": SCHED}), s)
+        self.assertEqual(len(s.sent), 1)
+        self.assertTrue(s.sent[0].startswith("🔄 Графік на сьогодні змінився"))
+
+    def test_force_daily_does_not_mark_sent(self):
+        s, st = Sender(), new_state()
+        st["days"] = {"2026-11-07": SCHED}
+        run(st, at(2026, 11, 6, 10), fetch_of({"2026-11-07": SCHED}), s, force_daily=True)
+        self.assertEqual(len(s.sent), 1)
+        self.assertIsNone(st["daily_sent"])
+        run(st, at(2026, 11, 6, 22, 5), fetch_of({"2026-11-07": SCHED}), s)
+        self.assertEqual(len(s.sent), 2)
+
+
 class TelegramTest(unittest.TestCase):
     def test_error_does_not_leak_token(self):
         with mock.patch("urllib.request.urlopen", side_effect=OSError("boom SECRET123")):

@@ -24,7 +24,7 @@ def new_state() -> dict:
     return {"days": {}, "daily_sent": None, "fail_count": 0, "fail_notified": False}
 
 
-def run(state: dict, now: datetime, fetch, send) -> dict:
+def run(state: dict, now: datetime, fetch, send, force_daily: bool = False) -> dict:
     today = now.date().isoformat()
     tomorrow = (now.date() + timedelta(days=1)).isoformat()
     try:
@@ -42,18 +42,23 @@ def run(state: dict, now: datetime, fetch, send) -> dict:
         state["fail_notified"] = False
     state["fail_count"] = 0
 
+    first_run = not state["days"]
     days = {d: v for d, v in days.items() if d >= today}
     old = {d: v for d, v in state["days"].items() if d >= today}
-    for d, before, after in changes(old, days):
-        label = "сьогодні" if d == today else "завтра" if d == tomorrow else human_date(d)
-        send(change_message(label, before, after))
-        state["days"][d] = after
+    if not first_run:
+        for d, before, after in changes(old, days):
+            label = "сьогодні" if d == today else "завтра" if d == tomorrow else human_date(d)
+            send(change_message(label, before, after))
+            state["days"][d] = after
 
-    if now.hour >= DAILY_HOUR and state["daily_sent"] != tomorrow:
+    if force_daily:
+        send(daily_message(tomorrow, days.get(tomorrow)))
+    elif now.hour >= DAILY_HOUR and state["daily_sent"] != tomorrow:
         send(daily_message(tomorrow, days.get(tomorrow)))
         state["daily_sent"] = tomorrow
 
-    state["days"] = days
+    # keep dates YASNO temporarily left out, so their return is not re-announced
+    state["days"] = {**old, **days}
     return state
 
 
@@ -64,9 +69,7 @@ def main() -> int:
     except (FileNotFoundError, ValueError):
         state = new_state()
     now = datetime.now(KYIV)
-    if os.environ.get("FORCE_DAILY") == "1":
-        state["daily_sent"] = None
-        now = now.replace(hour=DAILY_HOUR, minute=0)
+    force_daily = os.environ.get("FORCE_DAILY") == "1"
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
     if not token or not chat_id:
@@ -79,9 +82,12 @@ def main() -> int:
 
     code = 0
     try:
-        run(state, now, lambda: normalize(fetch_raw()), send)
+        run(state, now, lambda: normalize(fetch_raw()), send, force_daily)
     except RuntimeError as e:
         print(f"send failed: {e}")
+        code = 1
+    except Exception as e:  # never lose state on an unexpected error
+        print(f"unexpected error: {e.__class__.__name__}: {e}")
         code = 1
     finally:
         with open(STATE_FILE, "w", encoding="utf-8") as f:
