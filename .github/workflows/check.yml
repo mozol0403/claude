@@ -1,0 +1,54 @@
+name: check
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      force_daily:
+        description: "Send tomorrow's schedule now (test)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Tests
+        run: python -m unittest -q
+      - name: Check schedule and notify
+        id: cloud
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          FORCE_DAILY: ${{ inputs.force_daily && '1' || '0' }}
+        run: python -m power.cloud
+      - name: Save state
+        if: always()
+        run: |
+          if git diff --quiet -- state.json; then echo "state unchanged"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state.json
+          git commit -m "chore: state"
+          for i in 1 2; do
+            git pull --rebase -X theirs origin main && git push && exit 0
+            sleep 5
+          done
+          exit 1
+      - name: Fail if notifying failed
+        if: steps.cloud.outcome == 'failure'
+        run: exit 1
