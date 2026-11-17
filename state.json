@@ -22,8 +22,24 @@
    "status": "ScheduleApplies"
   },
   "2026-11-18": {
-   "off": [],
-   "status": "WaitingForSchedule"
+   "off": [
+    [
+     0,
+     30,
+     "definite"
+    ],
+    [
+     510,
+     750,
+     "definite"
+    ],
+    [
+     1080,
+     1350,
+     "definite"
+    ]
+   ],
+   "status": "ScheduleApplies"
   }
  },
  "fail_count": 0,
