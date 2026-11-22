@@ -1,26 +1,6 @@
 {
  "daily_sent": "2026-11-22",
  "days": {
-  "2026-11-21": {
-   "off": [
-    [
-     0,
-     180,
-     "definite"
-    ],
-    [
-     570,
-     810,
-     "definite"
-    ],
-    [
-     1140,
-     1410,
-     "definite"
-    ]
-   ],
-   "status": "ScheduleApplies"
-  },
   "2026-11-22": {
    "off": [
     [
@@ -35,6 +15,10 @@
     ]
    ],
    "status": "ScheduleApplies"
+  },
+  "2026-11-23": {
+   "off": [],
+   "status": "WaitingForSchedule"
   }
  },
  "fail_count": 0,
